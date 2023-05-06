@@ -1,0 +1,87 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 15 20:18:21 2021
+
+@author: Nicolas
+"""
+print('Importing libraries.')
+
+import pandas as pd
+import numpy as np
+from openpyxl import load_workbook
+import time
+import statsmodels.api as sm
+import seaborn
+import statsmodels.formula.api as smf 
+import matplotlib.pyplot as plt #For making plots.
+import statsmodels.stats.multicomp as multi #For Tukey POST HOC analysis
+
+#Reduces errors.
+pd.set_option('display.float_format',lambda x:'%f'%x)
+#Sets theme.
+seaborn.set_theme(style="whitegrid")
+
+print('Opening dataset')
+start = time.time()
+end = time.time()
+print(end - start)
+
+#Opens dataset.
+data = pd.read_csv("v4_oa_ir_bw_hs_blsvntyfv_cgeo_78745.csv", low_memory=False)
+print("Beginning the dropna function.")
+end = time.time()
+print(end - start)
+data = data.dropna()
+
+#Separating numerical from categorical variables being used.
+all_vars = data.columns.tolist()
+num_vars = all_vars[:1]
+cat_vars = all_vars[1:]
+
+print('Converting to numerical and centering quantitative variables.')
+end = time.time()
+print(end - start)
+
+#Data management.
+for col in all_vars: data[col] = pd.to_numeric(data[col], errors='coerce')             #Converts all to numerical.
+for col in num_vars: data[col] = (data[col] - data[col].mean())      # center quantitative IVs for regression analysis
+
+print("Data management complete.")
+print("Beginning logistic regression.")
+end = time.time()
+print(end - start)
+
+print("Putting the different APD Officers and APD SectorDistricts in bins.")
+
+officers = []
+tracts = []
+
+for col in all_vars:
+    if col.startswith('officer'):
+        officers.append(col)
+
+for col in all_vars:
+    if col.startswith('tract'):
+        tracts.append(col)
+
+print(officers)
+print(tracts)
+
+#Logistic regression analysis.
+
+officercount=0
+
+for i in officers:
+    officercount+=1
+    blockscount =0
+
+    print('OfficerCount + block: %s + %s' %(officercount, blockscount))
+    end = time.time()
+    print(end - start)
+    for i2 in tracts:
+        print('OfficerCount + tract: %s + %s' %(i, i2 ))
+        
+        blockscount+=1
+        lreg1 = smf.logit(formula = 'blackbool ~ C(%s) + C(%s) + C(sexbool) + blkwhtratio + HotSpotRating' %(i, i2),data = data).fit()
+        with open('logistic_reg_results.csv', 'a') as fh:
+            fh.write(lreg1.summary().as_csv())
